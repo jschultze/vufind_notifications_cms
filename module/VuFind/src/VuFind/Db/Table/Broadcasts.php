@@ -90,7 +90,7 @@ class Broadcasts extends Gateway
     public function insertOrUpdateBroadcast($data, $broadcastData = null, $broadcast_id = null)
     {
         foreach ($this->config['Notifications']['languages'] as $language) {
-            if ($broadcastData['id_' . $language] == null) {
+            if (($broadcastData['id_' . $language] ?? null) == null) {
                 $broadcast = $this->createRow();
             } else {
                 $broadcast = $this->getBroadcastById($broadcastData['id_' . $language]);
@@ -98,14 +98,14 @@ class Broadcasts extends Gateway
 
             $broadcast->visibility = $data['visibility'];
             $broadcast->visibility_global = $data['visibility_global'];
-            $broadcast->priority = $data['priority'];
+            $broadcast->priority = $data['priority'] ?? 0;;
             $broadcast->author_id = $data['author_id'];
             $broadcast->content = $data['content_' . $language];
             $broadcast->color = $data['color'];
             $broadcast->startdate = $data['startdate'];
             $broadcast->enddate = $data['enddate'];
-            $broadcast->change_date = $data['change_date'];
-            $broadcast->create_date = $data['create_date'];
+            $broadcast->change_date = $data['change_date'] ?? null;
+            $broadcast->create_date = $data['create_date'] ?? null;
             $broadcast->language = $language;
 
             if ($broadcast_id == 'NEW') {
