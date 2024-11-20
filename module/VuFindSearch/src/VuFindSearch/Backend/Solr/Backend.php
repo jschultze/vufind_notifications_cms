@@ -48,6 +48,7 @@ use VuFindSearch\Response\RecordCollectionInterface;
 
 use function count;
 use function is_int;
+use function sprintf;
 
 /**
  * SOLR backend.
@@ -165,7 +166,7 @@ class Backend extends AbstractBackend implements
 
         $params->set('rows', $limit);
         $params->set('start', $offset);
-        $params->mergeWith($this->getQueryBuilder()->build($query));
+        $params->mergeWith($this->getQueryBuilder()->build($query, $params));
         return $this->connector->search($params);
     }
 
@@ -212,7 +213,12 @@ class Backend extends AbstractBackend implements
 
         $params->set('rows', $limit);
         $params->set('start', $offset);
-        $params->set('fl', $this->getConnector()->getUniqueKey());
+        $flParts = [$this->getConnector()->getUniqueKey()];
+        if ($fl = $params->get('fl')) {
+            // Merge multiple values if necessary, then split on delimiter:
+            $flParts = array_unique(array_merge($flParts, explode(',', implode(',', $fl))));
+        }
+        $params->set('fl', implode(',', $flParts));
         $params->mergeWith($this->getQueryBuilder()->build($query));
         $response   = $this->connector->search($params);
         $collection = $this->createRecordCollection($response);
@@ -328,18 +334,18 @@ class Backend extends AbstractBackend implements
     /**
      * Return terms from SOLR index.
      *
-     * @param string   $field  Index field
-     * @param string   $start  Starting term (blank for beginning of list)
-     * @param int      $limit  Maximum number of terms
-     * @param ParamBag $params Additional parameters
+     * @param string|ParamBag|null $field  Index field
+     * @param ?string              $start  Starting term (blank for beginning of list)
+     * @param ?int                 $limit  Maximum number of terms
+     * @param ?ParamBag            $params Additional parameters
      *
      * @return Terms
      */
     public function terms(
-        $field = null,
-        $start = null,
-        $limit = null,
-        ParamBag $params = null
+        string|ParamBag|null $field = null,
+        ?string $start = null,
+        ?int $limit = null,
+        ?ParamBag $params = null
     ) {
         // Support alternate syntax with ParamBag as first parameter:
         if ($field instanceof ParamBag && $params === null) {

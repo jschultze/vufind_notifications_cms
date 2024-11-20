@@ -72,7 +72,7 @@ class EDSTest extends \PHPUnit\Framework\TestCase
      * @param string $test   Name of test fixture to load
      * @param array  $config Driver configuration (null to use default)
      *
-     * @return void
+     * @return EDS
      */
     protected function getDriver(string $test = null, array $config = null): EDS
     {
@@ -564,17 +564,19 @@ class EDSTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * Test getItemsSubjects for a record.
+     * Test getAllSubjectHeadingsFlattened for a record.
      *
      * @return void
      */
-    public function testGetItemsSubjects(): void
+    public function testGetAllSubjectHeadingsFlattened(): void
     {
         $driver = $this->getDriver('valid-eds-record');
         $this->assertEquals(
-            '<a href="../EDS/Search?lookfor=%22PSYCHOTHERAPY%22&amp;type=SU">PSYCHOTHERAPY</a>, ' .
-            '<a href="../EDS/Search?lookfor=%22METAPHOR%2E%22&amp;type=SU">METAPHOR.</a>',
-            $driver->getItemsSubjects()
+            [
+                'PSYCHOTHERAPY',
+                'METAPHOR',
+            ],
+            $driver->getAllSubjectHeadingsFlattened()
         );
     }
 

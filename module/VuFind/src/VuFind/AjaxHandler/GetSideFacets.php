@@ -5,7 +5,7 @@
  *
  * PHP version 8
  *
- * Copyright (C) The National Library of Finland 2018-2023.
+ * Copyright (C) The National Library of Finland 2018-2024.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -197,11 +197,16 @@ class GetSideFacets extends \VuFind\AjaxHandler\AbstractBase implements \Laminas
         };
 
         $runner = $this->searchRunner;
-        return $runner->run(
+        $results = $runner->run(
             $request,
             $request['searchClassId'] ?? DEFAULT_SEARCH_BACKEND,
             $setupCallback
         );
+        // Restore limit overridden by the setup callback above:
+        if ($limit = $request['limit'] ?? null) {
+            $results->getParams()->setLimit($limit);
+        }
+        return $results;
     }
 
     /**
@@ -224,11 +229,11 @@ class GetSideFacets extends \VuFind\AjaxHandler\AbstractBase implements \Laminas
         $facetSet = $recommend->getFacetSet();
         foreach ($facets as $facet) {
             if (strpos($facet, ':')) {
-                $response[$facet]['checkboxCount']
-                    = $this->getCheckboxFacetCount($facet, $results);
+                $response[$facet]['checkboxCount'] = $recommend->getCheckboxFacetCount($facet);
             } else {
                 $context['facet'] = $facet;
                 $context['cluster'] = $facetSet[$facet] ?? [
+                    'label' => $results->getParams()->getFacetLabel($facet),
                     'list' => [],
                 ];
                 $context['collapsedFacets'] = [];
@@ -239,19 +244,5 @@ class GetSideFacets extends \VuFind\AjaxHandler\AbstractBase implements \Laminas
             }
         }
         return $response;
-    }
-
-    /**
-     * Get the result count for a checkbox facet
-     *
-     * @param string  $facet   Facet
-     * @param Results $results Search results
-     *
-     * @return int|null
-     */
-    protected function getCheckboxFacetCount($facet, Results $results)
-    {
-        // There's currently no good way to return counts for checkbox filters.
-        return null;
     }
 }

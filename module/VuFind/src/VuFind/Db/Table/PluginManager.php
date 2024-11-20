@@ -47,11 +47,13 @@ class PluginManager extends \VuFind\ServiceManager\AbstractPluginManager
      */
     protected $aliases = [
         'accesstoken' => AccessToken::class,
+        'authhash' => AuthHash::class,
         'changetracker' => ChangeTracker::class,
         'comments' => Comments::class,
         'externalsession' => ExternalSession::class,
         'notifications_broadcasts' => Broadcasts::class,
         'notifications_pages' => Pages::class,
+        'feedback' => Feedback::class,
         'logintoken' => LoginToken::class,
         'oairesumption' => OaiResumption::class,
         'ratings' => Ratings::class,

@@ -48,8 +48,6 @@ use function in_array;
 use function intval;
 use function is_array;
 use function is_callable;
-use function is_float;
-use function is_int;
 use function is_object;
 use function strlen;
 
@@ -174,6 +172,13 @@ class Params
      * @var array
      */
     protected $checkboxFacets = [];
+
+    /**
+     * Whether to fetch result counts for checkbox facets
+     *
+     * @var bool
+     */
+    protected $fetchCheckboxFacetCounts = false;
 
     /**
      * Applied filters
@@ -1067,15 +1072,28 @@ class Params
     }
 
     /**
+     * Enable or disable fetching of checkbox facet counts
+     *
+     * @param bool $enable Whether to enable counts
+     *
+     * @return void
+     */
+    public function toggleCheckboxFacetCounts(bool $enable): void
+    {
+        $this->fetchCheckboxFacetCounts = $enable;
+    }
+
+    /**
      * Get a user-friendly string to describe the provided facet field.
      *
-     * @param string $field   Facet field name.
-     * @param string $value   Facet value.
-     * @param string $default Default field name (null for default behavior).
+     * @param string $field               Facet field name.
+     * @param string $value               Facet value.
+     * @param string $default             Default field name (null for default behavior).
+     * @param bool   $allowCheckboxFacets Should checkbox facet labels be allowed too?
      *
-     * @return string         Human-readable description of field.
+     * @return string Human-readable description of field.
      */
-    public function getFacetLabel($field, $value = null, $default = null)
+    public function getFacetLabel($field, $value = null, $default = null, $allowCheckboxFacets = true)
     {
         if (
             !isset($this->facetConfig[$field])
@@ -1084,7 +1102,7 @@ class Params
         ) {
             $field = $this->facetAliases[$field];
         }
-        $checkboxFacet = $this->checkboxFacets[$field]["$field:$value"] ?? null;
+        $checkboxFacet = $allowCheckboxFacets ? ($this->checkboxFacets[$field]["$field:$value"] ?? null) : null;
         if (null !== $checkboxFacet) {
             return $checkboxFacet['desc'];
         }
@@ -1149,8 +1167,8 @@ class Params
         $translatedFacets = $this->getOptions()->getTranslatedFacets();
         // Loop through all the current filter fields
         foreach ($this->filterList as $field => $values) {
-            [$operator, $field] = $this->parseOperatorAndFieldName($field);
-            $translate = in_array($field, $translatedFacets);
+            [$operator, $bareField] = $this->parseOperatorAndFieldName($field);
+            $translate = in_array($bareField, $translatedFacets);
             // and each value currently used for that field
             foreach ($values as $value) {
                 // Add to the list unless it's in the list of fields to skip:
@@ -1158,9 +1176,9 @@ class Params
                     !isset($skipList[$field])
                     || !in_array($value, $skipList[$field])
                 ) {
-                    $facetLabel = $this->getFacetLabel($field, $value);
+                    $facetLabel = $this->getFacetLabel($bareField, $value, allowCheckboxFacets: false);
                     $list[$facetLabel][] = $this->formatFilterListEntry(
-                        $field,
+                        $bareField,
                         $value,
                         $operator,
                         $translate
@@ -1377,11 +1395,14 @@ class Params
      * Support method for initDateFilters() -- normalize a year for use in a
      * year-based date range.
      *
-     * @param ?string $year Value to check for valid year.
+     * @param ?string $year     Value to check for valid year.
+     * @param bool    $rangeEnd Is this the end of a range?
      *
      * @return string      Formatted year.
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    protected function formatYearForDateRange($year)
+    protected function formatYearForDateRange($year, $rangeEnd = false)
     {
         // Make sure parameter is set and numeric; default to wildcard otherwise:
         $year = ($year && preg_match('/\d{2,4}/', $year)) ? $year : '*';
@@ -1400,36 +1421,37 @@ class Params
      * Support method for initFullDateFilters() -- normalize a date for use in a
      * year/month/day date range.
      *
-     * @param ?string $date Value to check for valid date.
+     * @param ?string $date     Value to check for valid date.
+     * @param bool    $rangeEnd Is this the end of a range?
      *
      * @return string      Formatted date.
      */
-    protected function formatDateForFullDateRange($date)
+    protected function formatDateForFullDateRange($date, $rangeEnd = false)
     {
         // Make sure date is valid; default to wildcard otherwise:
-        $date = $date ? SolrUtils::sanitizeDate($date) : null;
+        $date = $date ? SolrUtils::sanitizeDate($date, $rangeEnd) : null;
         return $date ?? '*';
     }
 
     /**
-     * Support method for initNumericRangeFilters() -- normalize a year for use in
-     * a date range.
+     * Support method for initNumericRangeFilters() -- normalize a number for use in
+     * a numeric range.
      *
-     * @param ?string $num Value to format into a number.
+     * @param ?string $num      Value to format into a number.
+     * @param bool    $rangeEnd Is this the end of a range?
      *
      * @return string     Formatted number.
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    protected function formatValueForNumericRange($num)
+    protected function formatValueForNumericRange($num, $rangeEnd = false)
     {
-        // empty strings are always wildcards:
-        if ($num == '') {
+        // empty strings, null values and non-numeric values are treated as wildcards:
+        if ($num === '' || $num === null || !is_numeric($num)) {
             return '*';
         }
-
-        // it's a string by default so this will kick it into interpreting it as a
-        // number
-        $num = $num + 0;
-        return $num = !is_float($num) && !is_int($num) ? '*' : $num;
+        // If we got this far, it's a number!
+        return $num;
     }
 
     /**
@@ -1491,8 +1513,8 @@ class Params
 
                 // Apply filtering/validation if necessary:
                 if (is_callable($valueFilter)) {
-                    $from = call_user_func($valueFilter, $from);
-                    $to = call_user_func($valueFilter, $to);
+                    $from = call_user_func($valueFilter, $from, false);
+                    $to = call_user_func($valueFilter, $to, true);
                 }
 
                 // Build filter only if necessary:

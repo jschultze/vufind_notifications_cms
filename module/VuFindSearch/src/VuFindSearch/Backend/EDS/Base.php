@@ -97,6 +97,27 @@ abstract class Base implements LoggerAwareInterface
     protected $searchHttpMethod = 'POST';
 
     /**
+     * The EDS API Key for this client
+     *
+     * @var ?string
+     */
+    protected $apiKey = null;
+
+    /**
+     * The EDS API Key for this client (Guest Usage)
+     *
+     * @var ?string
+     */
+    protected $apiKeyGuest = null;
+
+    /**
+     * Indicator if user "isGuest"
+     *
+     * @var bool
+     */
+    protected $isGuest = true;
+
+    /**
      * Constructor
      *
      * Sets up the EDS API Client
@@ -127,27 +148,23 @@ abstract class Base implements LoggerAwareInterface
                         break;
                     case 'search_http_method':
                         $this->searchHttpMethod = $value;
+                        break;
+                    case 'api_key':
+                        $this->apiKey = $value;
+                        break;
+                    case 'api_key_guest':
+                        $this->apiKeyGuest = $value;
+                        break;
+                    case 'is_guest':
+                        $this->isGuest = $value;
+                        break;
                 }
             }
         }
     }
 
     /**
-     * Print a message if debug is enabled.
-     *
-     * @param string $msg Message to print
-     *
-     * @return void
-     *
-     * @deprecated Use $this->debug function.
-     */
-    protected function debugPrint($msg)
-    {
-        $this->debug($msg);
-    }
-
-    /**
-     * Obtain edsapi search critera and application related settings
+     * Obtain edsapi search criteria and application related settings
      *
      * @param string $authenticationToken Authentication token
      * @param string $sessionToken        Session token
@@ -296,7 +313,7 @@ abstract class Base implements LoggerAwareInterface
         $json = $method === 'GET' ? null : $query->convertToSearchRequestJSON();
         $qs = $method === 'GET' ? $query->convertToQueryStringParameterArray() : [];
         $this->debug(
-            'Query: ' . ($method === 'GET' ? print_r($qs, true) : $json)
+            'Query: ' . ($method === 'GET' ? $this->varDump($qs) : $json)
         );
         $url = $this->apiHost . '/search';
         $headers = $this->setTokens($authenticationToken, $sessionToken);
@@ -461,10 +478,21 @@ abstract class Base implements LoggerAwareInterface
             'Content-Type' => $this->contentType,
             'Accept-Encoding' => 'gzip,deflate',
         ];
+        $this->debug(
+            'isGuest: ' . ($this->isGuest ? 'true' : 'false')
+            . ' | APIKey: ' . ($this->apiKey ? substr($this->apiKey, 0, 10) : '-')
+            . ' | APIKey Guest: ' . ($this->apiKeyGuest ? substr($this->apiKeyGuest, 0, 10) : '-')
+        );
         if (null != $headerParams) {
             foreach ($headerParams as $key => $value) {
                 $headers[$key] = $value;
             }
+        }
+        if (!empty($this->apiKey)) {
+            $headers['x-api-key'] = $this->apiKey;
+        }
+        if ($this->isGuest && !empty($this->apiKeyGuest)) {
+            $headers['x-api-key'] = $this->apiKeyGuest;
         }
         $response = $this->httpRequest(
             $baseUrl,

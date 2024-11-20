@@ -61,24 +61,19 @@
       // Collect small scripts together and append as one block:
       $appendScripts = [];
 
+      if (!empty($this->themeConfig()['stickyElements'])) {
+        $this->headScript()->appendFile('sticky_elements.js');
+      }
+
       if (!isset($this->renderingError)) {
         // Deal with cart stuff:
         $cart = $this->cart();
         if ($cart->isActive()) {
           $this->headScript()->appendFile('vendor/js.cookie.js');
           $this->headScript()->appendFile('cart.js');
-          if ($domain = $cart->getCookieDomain()) {
-            $appendScripts[] = 'VuFind.cart.setDomain("' . $domain . '");';
-          }
-          if ($cookiePath = $cart->getCookiePath()) {
-            $appendScripts[] = 'VuFind.cart.setCookiePath("' . $cookiePath . '");';
-          }
-          if ($cookieSameSite = $cart->getCookieSameSite()) {
-            $appendScripts[] = 'VuFind.cart.setCookieSameSite("' . $cookieSameSite . '");';
-          }
         }
         $this->headScript()->prependScript(
-            'var userIsLoggedIn = ' . ($this->auth()->isLoggedIn() ? 'true' : 'false') . ';'
+            'var userIsLoggedIn = ' . ($this->auth()->getIdentity() ? 'true' : 'false') . ';'
         );
       }
 
@@ -99,6 +94,7 @@
       }
 
       $root = rtrim($this->url('home'), '/');
+      $jsConfig = !isset($this->renderingError) ? $this->render('js-configs.phtml') : '{}';
       $translations = !isset($this->renderingError) ? $this->render('js-translations.phtml') : '{}';
       $dsb = DEFAULT_SEARCH_BACKEND;
       $cspNonce = $this->csp()->getNonce();
@@ -106,11 +102,22 @@
       $appendScripts[] = <<<JS
           VuFind.path = '{$root}';
           VuFind.defaultSearchBackend = '{$dsb}';
+          VuFind.config.add({$jsConfig});
           VuFind.addTranslations({$translations});
           VuFind.addIcons({$icons});
           VuFind.setCspNonce('{$cspNonce}');
           VuFind.setCurrentSearchId($searchId);
           JS;
+
+      if ($domain = $this->cookieManager()->getDomain()) {
+        $appendScripts[] = 'VuFind.cookie.setDomain(' . json_encode($domain) . ');';
+      }
+      if ($cookiePath = $this->cookieManager()->getPath()) {
+        $appendScripts[] = 'VuFind.cookie.setCookiePath(' . json_encode($cookiePath) . ');';
+      }
+      if ($cookieSameSite = $this->cookieManager()->getSameSite()) {
+        $appendScripts[] = 'VuFind.cookie.setCookieSameSite(' . json_encode($cookieSameSite) . ');';
+      }
 
       if (!empty($lightboxParent)) {
         $lightboxParent = json_encode((string)$lightboxParent);
@@ -136,7 +143,7 @@
       <?php if (isset($this->layout()->srmessage)): // message for benefit of screen-reader users ?>
         <span class="sr-only" role="heading" aria-level="1"><?=$this->layout()->srmessage ?></span>
       <?php endif; ?>
-      <a class="sr-only" href="#content"><?=$this->transEsc('Skip to content') ?></a>
+      <a class="sr-only sr-only-focusable" href="#content"><?=$this->transEsc('Skip to content') ?></a>
       <?=$this->render('header.phtml')?>
     </header>
     <?php if (($this->layout()->showBreadcrumbs ?? true) && $this->layout()->breadcrumbs !== false): ?>
@@ -163,7 +170,7 @@
         </div>
       </div>
     </div>
-    <div class="offcanvas-overlay" data-toggle="offcanvas"></div>
+    <div class="vufind-offcanvas-overlay" data-toggle="vufind-offcanvas"></div>
     <?=$this->render('Helpers/analytics.phtml')?>
     <?php foreach ($this->captcha()->js() as $jsInclude):?>
       <?=$this->inlineScript(\Laminas\View\Helper\HeadScript::FILE, $jsInclude, 'SET')?>
