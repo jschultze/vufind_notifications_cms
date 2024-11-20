@@ -107,6 +107,7 @@ return [
             'VuFind\View\Helper\Bootstrap5\Highlight' => 'Laminas\ServiceManager\Factory\InvokableFactory',
             'VuFind\View\Helper\Bootstrap5\LayoutClass' => 'VuFind\View\Helper\Bootstrap5\LayoutClassFactory',
             'VuFind\View\Helper\Bootstrap5\Search' => 'Laminas\ServiceManager\Factory\InvokableFactory',
+            'VuFind\View\Helper\Notifications\Notifications' => 'VuFind\View\Helper\Notifications\NotificationsFactory',
         ],
         'aliases' => [
             'bulkAction' => 'VuFind\View\Helper\Bootstrap5\BulkAction',
@@ -115,6 +116,7 @@ return [
             'highlight' => 'VuFind\View\Helper\Bootstrap5\Highlight',
             'layoutClass' => 'VuFind\View\Helper\Bootstrap5\LayoutClass',
             'search' => 'VuFind\View\Helper\Bootstrap5\Search',
+            'notifications' => 'VuFind\View\Helper\Notifications\Notifications',
         ],
     ],
     'icons' => [
