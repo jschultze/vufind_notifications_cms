@@ -110,7 +110,7 @@ class BroadcastsForm extends Form implements InputFilterProviderInterface, Trans
                 ],
                 'attributes' => [
                     'class' => 'form-control',
-                    'rows' => '6s',
+                    'rows' => '6',
                 ],
             ]);
         }

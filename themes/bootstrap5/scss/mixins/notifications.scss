@@ -9,6 +9,11 @@ textarea.form-control {
   width: 50px;
   height: 24px;
   margin-right: 10px;
+
+  .form-control:not([multiple]):not([size]) {
+    height: auto;
+    margin-top: 5px;
+  }
 }
 
 .broadcast_wrapper {
@@ -117,4 +122,8 @@ ul.notifications-tabs {
   padding: 5px;
   border-radius: 0 5px 5px 5px;
   margin-bottom: 15px;
+
+  .form-control:not([multiple]):not([size]) {
+    height: auto;
+  }
 }
